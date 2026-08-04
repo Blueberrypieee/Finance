@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Dashboard · Finance Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/menu.css') }}">
+</head>
+<body>
+
+  <div class="page">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <button class="icon-btn" id="hamburgerBtn" aria-label="Buka menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 7H20" stroke="#111827" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M4 12H20" stroke="#111827" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M4 17H20" stroke="#111827" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="topbar__greeting">
+        <span class="topbar__hello">Halo 👋</span>
+        <span class="topbar__name">Selamat datang kembali</span>
+      </div>
+      <button class="icon-btn" aria-label="Profil">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="8" r="3.5" stroke="#111827" stroke-width="1.7"/>
+          <path d="M4.5 19.5C5.8 16.4 8.6 14.5 12 14.5C15.4 14.5 18.2 16.4 19.5 19.5" stroke="#111827" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <main class="dashboard">
+
+      <!-- Balance card -->
+      <section class="balance-card">
+        <div class="balance-card__top">
+          <span class="balance-card__label">Current Balance</span>
+          <button class="edit-balance-btn" id="editBalanceBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 20L4.7 16.3L15.6 5.4C16.2 4.8 17.1 4.8 17.7 5.4L18.6 6.3C19.2 6.9 19.2 7.8 18.6 8.4L7.7 19.3L4 20Z" stroke="#FFFFFF" stroke-width="1.6" stroke-linejoin="round"/>
+            </svg>
+            Edit
+          </button>
+        </div>
+        <div class="balance-card__amount" id="balanceAmount">Rp 0</div>
+      </section>
+
+      <!-- Quick actions -->
+      <section class="actions-row">
+        <button class="action-btn action-btn--income" id="addIncomeBtn">
+          <span class="action-btn__icon">+</span>
+          Tambah Pemasukan
+        </button>
+        <button class="action-btn action-btn--expense" id="addExpenseBtn">
+          <span class="action-btn__icon">−</span>
+          Tambah Pengeluaran
+        </button>
+      </section>
+
+      <!-- Transaction history -->
+      <section class="transactions">
+        <div class="transactions__header">
+          <h2>Transaksi Terbaru</h2>
+        </div>
+
+        <div class="transaction-list" id="transactionList"></div>
+
+        <div class="empty-state" id="emptyState">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="6" width="18" height="14" rx="2" stroke="#9CA3AF" stroke-width="1.5"/>
+            <path d="M3 10H21" stroke="#9CA3AF" stroke-width="1.5"/>
+            <path d="M7 3V6" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M17 3V6" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <p>Belum ada transaksi.<br>Yuk tambah yang pertama!</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal: Add / Edit Transaction -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal__header">
+        <h3 class="modal__title" id="modalTitle">Tambah Pemasukan</h3>
+        <button class="modal__close" id="modalCloseBtn" aria-label="Tutup">&times;</button>
+      </div>
+
+      <form id="transactionForm" novalidate>
+        <input type="hidden" id="transactionId">
+        <input type="hidden" id="transactionType">
+
+        <div class="field">
+          <label class="field__label" for="amount">Jumlah</label>
+          <div class="field__amount-wrap">
+            <span class="field__prefix">Rp</span>
+            <input class="field__input field__input--amount" type="number" id="amount" inputmode="numeric" min="1" step="1" placeholder="0" required>
+          </div>
+          <span class="field__error" id="amountError">Jumlah wajib diisi</span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="category">Kategori</label>
+          <input class="field__input" type="text" id="category" placeholder="Misal: Makan, Gaji, Belanja" required>
+          <span class="field__error" id="categoryError">Kategori wajib diisi</span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="notes">Catatan <span class="field__optional">(opsional)</span></label>
+          <input class="field__input" type="text" id="notes" placeholder="Tambahkan catatan">
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="date">Tanggal</label>
+          <input class="field__input" type="date" id="date" required>
+        </div>
+
+        <button type="submit" class="btn-primary" id="saveTransactionBtn">
+          <span class="btn-primary__text">Simpan</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Balance -->
+  <div class="modal-overlay" id="balanceModalOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="balanceModalTitle">
+      <div class="modal__header">
+        <h3 class="modal__title" id="balanceModalTitle">Update Saldo</h3>
+        <button class="modal__close" id="balanceModalCloseBtn" aria-label="Tutup">&times;</button>
+      </div>
+
+      <form id="balanceForm" novalidate>
+        <div class="field">
+          <label class="field__label" for="newBalance">Saldo Saat Ini</label>
+          <div class="field__amount-wrap">
+            <span class="field__prefix">Rp</span>
+            <input class="field__input field__input--amount" type="number" id="newBalance" inputmode="numeric" min="0" step="1" placeholder="0" required>
+          </div>
+          <span class="field__error" id="newBalanceError">Saldo wajib diisi</span>
+        </div>
+
+        <button type="submit" class="btn-primary">
+          <span class="btn-primary__text">Simpan</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirm delete -->
+  <div class="modal-overlay" id="deleteModalOverlay">
+    <div class="modal modal--small" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+      <div class="modal__header">
+        <h3 class="modal__title" id="deleteModalTitle">Hapus Transaksi?</h3>
+        <button class="modal__close" id="deleteModalCloseBtn" aria-label="Tutup">&times;</button>
+      </div>
+      <p class="modal__desc">Transaksi yang dihapus tidak bisa dikembalikan, dan saldo akan disesuaikan otomatis.</p>
+      <div class="modal__actions">
+        <button class="btn-secondary" id="cancelDeleteBtn">Batal</button>
+        <button class="btn-danger" id="confirmDeleteBtn">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transaction card template -->
+  <template id="transactionCardTemplate">
+    <div class="transaction-card">
+      <div class="transaction-card__icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-income">
+          <path d="M12 19V5M12 5L6 11M12 5L18 11" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-expense">
+          <path d="M12 5V19M12 19L6 13M12 19L18 13" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="transaction-card__info">
+        <div class="transaction-card__top">
+          <span class="transaction-card__category"></span>
+          <span class="transaction-card__amount"></span>
+        </div>
+        <p class="transaction-card__notes"></p>
+        <span class="transaction-card__date"></span>
+      </div>
+      <div class="transaction-card__actions">
+        <button class="icon-btn-sm edit-btn" aria-label="Edit transaksi">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 20L4.7 16.3L15.6 5.4C16.2 4.8 17.1 4.8 17.7 5.4L18.6 6.3C19.2 6.9 19.2 7.8 18.6 8.4L7.7 19.3L4 20Z" stroke="#6B7280" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="icon-btn-sm delete-btn" aria-label="Hapus transaksi">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 7H20" stroke="#6B7280" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M9 7V4.8C9 4.4 9.4 4 9.8 4H14.2C14.6 4 15 4.4 15 4.8V7" stroke="#6B7280" stroke-width="1.6"/>
+            <path d="M6 7L6.8 19.2C6.9 19.7 7.3 20 7.8 20H16.2C16.7 20 17.1 19.7 17.2 19.2L18 7" stroke="#6B7280" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <!-- Side drawer -->
+  <div class="drawer-overlay" id="drawerOverlay">
+    <nav class="drawer" role="dialog" aria-modal="true" aria-label="Menu navigasi">
+      <div class="drawer__header">
+        <div class="drawer__brand">
+          <span class="logo-badge">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 17L9 11L13 15L21 7" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M15 7H21V13" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="drawer__brand-name">Finance Tracker</span>
+        </div>
+        <button class="modal__close" id="drawerCloseBtn" aria-label="Tutup menu">&times;</button>
+      </div>
+
+      <ul class="drawer__nav">
+        <li>
+          <a href="{{ url_for('menu') }}" class="drawer__link is-active">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 10V19C6 19.6 6.4 20 7 20H17C17.6 20 18 19.6 18 19V10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="#" class="drawer__link drawer__link--disabled" id="statisticLink">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 20V13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M12 20V6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M19 20V10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            Statistik
+            <span class="drawer__badge">Segera</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+</body>
+</html>
+
