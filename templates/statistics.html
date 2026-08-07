@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Statistik · Finance Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/statistics.css') }}">
 </head>
 <body>
@@ -23,12 +26,12 @@
         <span class="topbar__hello">Statistik</span>
         <span class="topbar__name">Ringkasan kebiasaan keuanganmu</span>
       </div>
-      <button class="icon-btn" aria-label="Profil">
+      <a href="{{ url_for('profile') }}" class="icon-btn" aria-label="Profil">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="12" cy="8" r="3.5" stroke="#111827" stroke-width="1.7"/>
           <path d="M4.5 19.5C5.8 16.4 8.6 14.5 12 14.5C15.4 14.5 18.2 16.4 19.5 19.5" stroke="#111827" stroke-width="1.7" stroke-linecap="round"/>
         </svg>
-      </button>
+      </a>
     </header>
 
     <main class="dashboard">
@@ -73,16 +76,18 @@
         <!-- Monthly income vs expense -->
         <section class="chart-card">
           <h2 class="chart-card__title">Income vs Expense per Bulan</h2>
-          <div class="chart-card__canvas-wrap">
-            <div id="monthlyChart" class="bar-chart" role="img" aria-label="Grafik pemasukan dan pengeluaran per bulan"></div>
+          <div class="bar-chart-legend">
+            <span><span class="legend-dot" style="background:#22C55E"></span> Income</span>
+            <span><span class="legend-dot" style="background:#EF4444"></span> Expense</span>
           </div>
+          <div class="bar-chart" id="monthlyChart" role="img" aria-label="Grafik pemasukan dan pengeluaran per bulan"></div>
         </section>
 
         <!-- Expense by category -->
         <section class="chart-card">
           <h2 class="chart-card__title">Pengeluaran per Kategori</h2>
           <div class="pie-chart-wrap">
-            <div id="categoryChart" class="pie-chart" role="img" aria-label="Grafik pengeluaran berdasarkan kategori"></div>
+            <div class="pie-chart" id="categoryChart" role="img" aria-label="Grafik pengeluaran berdasarkan kategori"></div>
           </div>
           <ul class="legend-list" id="categoryLegend"></ul>
         </section>
@@ -173,6 +178,15 @@
             Statistik
           </a>
         </li>
+        <li>
+          <a href="{{ url_for('profile') }}" class="drawer__link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M4.5 19.5C5.8 16.4 8.6 14.5 12 14.5C15.4 14.5 18.2 16.4 19.5 19.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            Profil
+          </a>
+        </li>
       </ul>
     </nav>
   </div>
@@ -180,5 +194,4 @@
   <script src="{{ url_for('static', filename='js/statistics.js') }}"></script>
 </body>
 </html>
-
 

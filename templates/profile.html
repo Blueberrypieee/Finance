@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Profil · Finance Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+</head>
+<body>
+
+  <div class="page">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <button class="icon-btn" id="hamburgerBtn" aria-label="Buka menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 7H20" stroke="#111827" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M4 12H20" stroke="#111827" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M4 17H20" stroke="#111827" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="topbar__greeting">
+        <span class="topbar__hello">Profil</span>
+        <span class="topbar__name">Kelola akun & data kamu</span>
+      </div>
+      <span class="topbar__spacer"></span>
+    </header>
+
+    <main class="dashboard">
+
+      <!-- Profile card -->
+      <section class="profile-card">
+        <div class="profile-card__avatar">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="8" r="3.5" stroke="#FFFFFF" stroke-width="1.7"/>
+            <path d="M4.5 19.5C5.8 16.4 8.6 14.5 12 14.5C15.4 14.5 18.2 16.4 19.5 19.5" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="profile-card__info">
+          <span class="profile-card__name">Pengguna</span>
+          <span class="profile-card__note">Akun lokal · belum tersambung ke server</span>
+        </div>
+      </section>
+
+      <!-- Action list -->
+      <section class="action-list">
+        <button class="action-item" id="exportCsvBtn">
+          <span class="action-item__icon action-item__icon--neutral">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 4V15" stroke="#16A34A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M7.5 10.5L12 15L16.5 10.5" stroke="#16A34A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 18V19C4 19.6 4.4 20 5 20H19C19.6 20 20 19.6 20 19V18" stroke="#16A34A" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="action-item__text">
+            <span class="action-item__title">Export Data (CSV)</span>
+            <span class="action-item__desc">Unduh semua transaksi kamu</span>
+          </span>
+          <svg class="action-item__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 6L15 12L9 18" stroke="#9CA3AF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <button class="action-item action-item--danger" id="logoutBtn">
+          <span class="action-item__icon action-item__icon--danger">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 4H6C5.4 4 5 4.4 5 5V19C5 19.6 5.4 20 6 20H9" stroke="#EF4444" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 15L19 12L14 9" stroke="#EF4444" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M19 12H10" stroke="#EF4444" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="action-item__text">
+            <span class="action-item__title">Logout</span>
+            <span class="action-item__desc">Keluar dari aplikasi</span>
+          </span>
+        </button>
+      </section>
+
+      <p class="csv-note" id="csvEmptyNote">Belum ada transaksi untuk diekspor.</p>
+
+    </main>
+  </div>
+
+  <!-- Confirm logout modal -->
+  <div class="modal-overlay" id="logoutModalOverlay">
+    <div class="modal modal--small" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+      <div class="modal__header">
+        <h3 class="modal__title" id="logoutModalTitle">Keluar dari akun?</h3>
+        <button class="modal__close" id="logoutModalCloseBtn" aria-label="Tutup">&times;</button>
+      </div>
+      <p class="modal__desc">Data transaksi kamu tetap tersimpan di perangkat ini. Kamu bisa login lagi kapan saja.</p>
+      <div class="modal__actions">
+        <button class="btn-secondary" id="cancelLogoutBtn">Batal</button>
+        <button class="btn-danger" id="confirmLogoutBtn">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Side drawer (shared with dashboard & statistics) -->
+  <div class="drawer-overlay" id="drawerOverlay">
+    <nav class="drawer" role="dialog" aria-modal="true" aria-label="Menu navigasi">
+      <div class="drawer__header">
+        <div class="drawer__brand">
+          <span class="logo-badge">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 17L9 11L13 15L21 7" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M15 7H21V13" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="drawer__brand-name">Finance Tracker</span>
+        </div>
+        <button class="modal__close" id="drawerCloseBtn" aria-label="Tutup menu">&times;</button>
+      </div>
+
+      <ul class="drawer__nav">
+        <li>
+          <a href="{{ url_for('menu') }}" class="drawer__link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 10V19C6 19.6 6.4 20 7 20H17C17.6 20 18 19.6 18 19V10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('statistics') }}" class="drawer__link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 20V13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M12 20V6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M19 20V10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            Statistik
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('profile') }}" class="drawer__link is-active">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M4.5 19.5C5.8 16.4 8.6 14.5 12 14.5C15.4 14.5 18.2 16.4 19.5 19.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            Profil
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+</body>
+</html>
+
