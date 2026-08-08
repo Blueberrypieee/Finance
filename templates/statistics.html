@@ -34,7 +34,19 @@
       </a>
     </header>
 
-    <main class="dashboard">
+    <!-- Skeleton (shown until JS finishes reading localStorage) -->
+    <div class="skeleton-wrap" id="pageSkeleton">
+      <div class="skeleton-summary-grid">
+        <div class="skeleton skeleton-summary-card"></div>
+        <div class="skeleton skeleton-summary-card"></div>
+        <div class="skeleton skeleton-summary-card"></div>
+        <div class="skeleton skeleton-summary-card"></div>
+      </div>
+      <div class="skeleton skeleton-chart"></div>
+      <div class="skeleton skeleton-chart"></div>
+    </div>
+
+    <main class="dashboard is-hidden-init" id="statisticsContent">
 
       <!-- Empty state -->
       <section class="empty-state" id="emptyState">

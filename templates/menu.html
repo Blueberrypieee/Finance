@@ -34,7 +34,21 @@
       </a>
     </header>
 
-    <main class="dashboard">
+    <!-- Skeleton (shown until JS finishes reading localStorage) -->
+    <div class="skeleton-wrap" id="pageSkeleton">
+      <div class="skeleton skeleton-balance"></div>
+      <div class="skeleton-actions-row">
+        <div class="skeleton skeleton-action"></div>
+        <div class="skeleton skeleton-action"></div>
+      </div>
+      <div class="skeleton skeleton-heading"></div>
+      <div class="skeleton skeleton-search"></div>
+      <div class="skeleton skeleton-row"></div>
+      <div class="skeleton skeleton-row"></div>
+      <div class="skeleton skeleton-row"></div>
+    </div>
+
+    <main class="dashboard is-hidden-init" id="dashboardContent">
 
       <!-- Balance card -->
       <section class="balance-card">
@@ -68,6 +82,30 @@
           <h2>Transaksi Terbaru</h2>
         </div>
 
+        <!-- Search -->
+        <div class="search-bar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="7" stroke="#9CA3AF" stroke-width="1.7"/>
+            <path d="M20 20L16.5 16.5" stroke="#9CA3AF" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <input type="text" id="searchInput" class="search-bar__input" placeholder="Cari kategori atau catatan...">
+          <button type="button" class="search-bar__clear" id="searchClearBtn" aria-label="Hapus pencarian">&times;</button>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-row">
+          <div class="filter-chips" id="typeFilterChips">
+            <button type="button" class="filter-chip is-active" data-type="all">Semua</button>
+            <button type="button" class="filter-chip" data-type="income">Pemasukan</button>
+            <button type="button" class="filter-chip" data-type="expense">Pengeluaran</button>
+          </div>
+          <select id="dateFilterSelect" class="filter-select">
+            <option value="all">Semua Waktu</option>
+            <option value="week">Minggu Ini</option>
+            <option value="month">Bulan Ini</option>
+          </select>
+        </div>
+
         <div class="transaction-list" id="transactionList"></div>
 
         <div class="empty-state" id="emptyState">
@@ -77,7 +115,7 @@
             <path d="M7 3V6" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round"/>
             <path d="M17 3V6" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
-          <p>Belum ada transaksi.<br>Yuk tambah yang pertama!</p>
+          <p id="emptyStateText">Belum ada transaksi.<br>Yuk tambah yang pertama!</p>
         </div>
       </section>
 

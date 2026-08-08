@@ -7,8 +7,14 @@ document.addEventListener('DOMContentLoaded', function () {
   var TRANSACTIONS_KEY = 'ft_transactions';
 
   var state = {
-    balance: loadBalance(),
-    transactions: loadTransactions()
+    balance: 0,
+    transactions: []
+  };
+
+  var filters = {
+    search: '',
+    type: 'all',      // 'all' | 'income' | 'expense'
+    dateRange: 'all'  // 'all' | 'week' | 'month'
   };
 
   var pendingDeleteId = null;
@@ -19,7 +25,13 @@ document.addEventListener('DOMContentLoaded', function () {
   var balanceAmountEl = document.getElementById('balanceAmount');
   var transactionListEl = document.getElementById('transactionList');
   var emptyStateEl = document.getElementById('emptyState');
+  var emptyStateTextEl = document.getElementById('emptyStateText');
   var cardTemplate = document.getElementById('transactionCardTemplate');
+
+  var searchInput = document.getElementById('searchInput');
+  var searchClearBtn = document.getElementById('searchClearBtn');
+  var typeFilterChips = document.querySelectorAll('#typeFilterChips .filter-chip');
+  var dateFilterSelect = document.getElementById('dateFilterSelect');
 
   var addIncomeBtn = document.getElementById('addIncomeBtn');
   var addExpenseBtn = document.getElementById('addExpenseBtn');
@@ -55,31 +67,46 @@ document.addEventListener('DOMContentLoaded', function () {
   var confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
   // ---------------------------------------------------------
-  // Storage helpers
+  // Data layer
   // ---------------------------------------------------------
-  function loadBalance() {
-    var raw = localStorage.getItem(BALANCE_KEY);
-    var value = raw !== null ? parseFloat(raw) : 0;
-    return isNaN(value) ? 0 : value;
-  }
+  // Every function here returns a Promise, even though it's backed by
+  // localStorage today. When the Flask backend is ready, only the INSIDE
+  // of these functions needs to change (e.g. swap for fetch() calls) —
+  // every place that calls api.getState()/api.saveState() below stays
+  // exactly the same.
+  var api = {
+    getState: function () {
+      var rawBalance = localStorage.getItem(BALANCE_KEY);
+      var balance = rawBalance !== null ? parseFloat(rawBalance) : 0;
+      if (isNaN(balance)) balance = 0;
 
-  function saveBalance() {
-    localStorage.setItem(BALANCE_KEY, String(state.balance));
-  }
+      var transactions = [];
+      try {
+        var rawTx = localStorage.getItem(TRANSACTIONS_KEY);
+        var parsed = rawTx ? JSON.parse(rawTx) : [];
+        transactions = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        transactions = [];
+      }
 
-  function loadTransactions() {
-    try {
-      var raw = localStorage.getItem(TRANSACTIONS_KEY);
-      var parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
+      // TODO(backend): replace the block above with:
+      //   return fetch('/api/state').then(function (res) { return res.json(); });
+      return Promise.resolve({ balance: balance, transactions: transactions });
+    },
+
+    saveState: function (balance, transactions) {
+      localStorage.setItem(BALANCE_KEY, String(balance));
+      localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+
+      // TODO(backend): replace the two lines above with:
+      //   return fetch('/api/state', {
+      //     method: 'PUT',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({ balance: balance, transactions: transactions })
+      //   });
+      return Promise.resolve();
     }
-  }
-
-  function saveTransactions() {
-    localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(state.transactions));
-  }
+  };
 
   // ---------------------------------------------------------
   // Formatting helpers
@@ -115,6 +142,32 @@ document.addEventListener('DOMContentLoaded', function () {
     return 'tx_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
   }
 
+  function isInDateRange(dateStr, range) {
+    if (range === 'all' || !dateStr) return true;
+
+    var parts = dateStr.split('-');
+    var txDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (range === 'month') {
+      return txDate.getFullYear() === today.getFullYear() && txDate.getMonth() === today.getMonth();
+    }
+
+    if (range === 'week') {
+      // Week starts on Monday
+      var dayOfWeek = today.getDay(); // 0 = Sunday
+      var diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      var monday = new Date(today);
+      monday.setDate(today.getDate() - diffToMonday);
+      var sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      return txDate >= monday && txDate <= sunday;
+    }
+
+    return true;
+  }
+
   // ---------------------------------------------------------
   // Rendering
   // ---------------------------------------------------------
@@ -123,16 +176,37 @@ document.addEventListener('DOMContentLoaded', function () {
     renderTransactionList();
   }
 
+  function getFilteredTransactions() {
+    var searchTerm = filters.search.trim().toLowerCase();
+
+    return state.transactions.filter(function (tx) {
+      if (filters.type !== 'all' && tx.type !== filters.type) return false;
+      if (!isInDateRange(tx.date, filters.dateRange)) return false;
+
+      if (searchTerm) {
+        var inCategory = (tx.category || '').toLowerCase().indexOf(searchTerm) !== -1;
+        var inNotes = (tx.notes || '').toLowerCase().indexOf(searchTerm) !== -1;
+        if (!inCategory && !inNotes) return false;
+      }
+
+      return true;
+    });
+  }
+
   function renderTransactionList() {
     transactionListEl.innerHTML = '';
 
-    var sorted = state.transactions.slice().sort(function (a, b) {
+    var filtered = getFilteredTransactions();
+    var sorted = filtered.slice().sort(function (a, b) {
       if (a.date !== b.date) return a.date < b.date ? 1 : -1;
       return b.createdAt - a.createdAt;
     });
 
     if (sorted.length === 0) {
       emptyStateEl.classList.add('is-visible');
+      emptyStateTextEl.innerHTML = state.transactions.length === 0
+        ? 'Belum ada transaksi.<br>Yuk tambah yang pertama!'
+        : 'Gak ada transaksi yang cocok.<br>Coba ubah kata kunci atau filter.';
       return;
     }
     emptyStateEl.classList.remove('is-visible');
@@ -253,10 +327,10 @@ document.addEventListener('DOMContentLoaded', function () {
       state.balance += type === 'income' ? amount : -amount;
     }
 
-    saveBalance();
-    saveTransactions();
-    render();
-    closeTransactionModal();
+    api.saveState(state.balance, state.transactions).then(function () {
+      render();
+      closeTransactionModal();
+    });
   });
 
   // ---------------------------------------------------------
@@ -289,9 +363,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     state.balance = value;
-    saveBalance();
-    render();
-    closeBalanceModal();
+    api.saveState(state.balance, state.transactions).then(function () {
+      render();
+      closeBalanceModal();
+    });
   });
 
   // ---------------------------------------------------------
@@ -320,9 +395,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var tx = state.transactions[idx];
       state.balance += tx.type === 'income' ? -tx.amount : tx.amount;
       state.transactions.splice(idx, 1);
-      saveBalance();
-      saveTransactions();
-      render();
+      api.saveState(state.balance, state.transactions).then(render);
     }
     closeDeleteModal();
   });
@@ -359,9 +432,51 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // ---------------------------------------------------------
+  // Search & filters
+  // ---------------------------------------------------------
+  searchInput.addEventListener('input', function () {
+    filters.search = searchInput.value;
+    searchClearBtn.classList.toggle('is-visible', filters.search.length > 0);
+    renderTransactionList();
+  });
+
+  searchClearBtn.addEventListener('click', function () {
+    searchInput.value = '';
+    filters.search = '';
+    searchClearBtn.classList.remove('is-visible');
+    renderTransactionList();
+    searchInput.focus();
+  });
+
+  typeFilterChips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      typeFilterChips.forEach(function (c) { c.classList.remove('is-active'); });
+      chip.classList.add('is-active');
+      filters.type = chip.dataset.type;
+      renderTransactionList();
+    });
+  });
+
+  dateFilterSelect.addEventListener('change', function () {
+    filters.dateRange = dateFilterSelect.value;
+    renderTransactionList();
+  });
+
+  // ---------------------------------------------------------
   // Init
   // ---------------------------------------------------------
-  render();
+  var pageSkeletonEl = document.getElementById('pageSkeleton');
+  var dashboardContentEl = document.getElementById('dashboardContent');
+
+  api.getState().then(function (data) {
+    state.balance = data.balance;
+    state.transactions = data.transactions;
+
+    render();
+
+    pageSkeletonEl.style.display = 'none';
+    dashboardContentEl.classList.remove('is-hidden-init');
+  });
 
 });
 

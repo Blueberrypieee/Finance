@@ -1,29 +1,33 @@
 document.addEventListener('DOMContentLoaded', function () {
 
   // ---------------------------------------------------------
-  // Storage (same keys/schema as dashboard)
+  // Data layer (same shape as menu.js — swap the inside for a real
+  // fetch() call once the Flask backend is ready; nothing that calls
+  // api.getState() below needs to change).
   // ---------------------------------------------------------
   var BALANCE_KEY = 'ft_balance';
   var TRANSACTIONS_KEY = 'ft_transactions';
 
-  var balance = loadBalance();
-  var transactions = loadTransactions();
+  var api = {
+    getState: function () {
+      var rawBalance = localStorage.getItem(BALANCE_KEY);
+      var balanceValue = rawBalance !== null ? parseFloat(rawBalance) : 0;
+      if (isNaN(balanceValue)) balanceValue = 0;
 
-  function loadBalance() {
-    var raw = localStorage.getItem(BALANCE_KEY);
-    var value = raw !== null ? parseFloat(raw) : 0;
-    return isNaN(value) ? 0 : value;
-  }
+      var transactionsValue = [];
+      try {
+        var rawTx = localStorage.getItem(TRANSACTIONS_KEY);
+        var parsed = rawTx ? JSON.parse(rawTx) : [];
+        transactionsValue = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        transactionsValue = [];
+      }
 
-  function loadTransactions() {
-    try {
-      var raw = localStorage.getItem(TRANSACTIONS_KEY);
-      var parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
+      // TODO(backend): replace the block above with:
+      //   return fetch('/api/state').then(function (res) { return res.json(); });
+      return Promise.resolve({ balance: balanceValue, transactions: transactionsValue });
     }
-  }
+  };
 
   // ---------------------------------------------------------
   // Formatting helpers
@@ -75,9 +79,8 @@ document.addEventListener('DOMContentLoaded', function () {
   var drawerOverlay = document.getElementById('drawerOverlay');
   var drawerCloseBtn = document.getElementById('drawerCloseBtn');
 
-  // Wire up the drawer FIRST, before any stats computation below.
-  // This guarantees the hamburger still works even if something in the
-  // stats/chart code throws.
+  // Wire up the drawer FIRST, independent of data loading — it should
+  // work immediately even while data is still "in flight".
   setupDrawer();
 
   function setupDrawer() {
@@ -91,27 +94,40 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  var pageSkeletonEl = document.getElementById('pageSkeleton');
+  var statisticsContentEl = document.getElementById('statisticsContent');
+
   // ---------------------------------------------------------
-  // Empty state check
+  // Load data, then reveal content + compute everything below.
   // ---------------------------------------------------------
-  if (transactions.length === 0) {
-    emptyStateEl.classList.add('is-visible');
-    statsContentEl.classList.remove('is-visible');
-    return; // nothing else to compute/render
-  }
+  api.getState().then(function (data) {
+    var balance = data.balance;
+    var transactions = data.transactions;
 
-  emptyStateEl.classList.remove('is-visible');
-  statsContentEl.classList.add('is-visible');
+    pageSkeletonEl.style.display = 'none';
+    statisticsContentEl.classList.remove('is-hidden-init');
 
-  // Everything from here on computes stats and builds the charts —
-  // wrap it so one bad value can't take down the whole page.
-  try {
-    renderStatistics();
-  } catch (err) {
-    console.error('Gagal menghitung/menampilkan statistik:', err);
-  }
+    // ---------------------------------------------------------
+    // Empty state check
+    // ---------------------------------------------------------
+    if (transactions.length === 0) {
+      emptyStateEl.classList.add('is-visible');
+      statsContentEl.classList.remove('is-visible');
+      return; // nothing else to compute/render
+    }
 
-  function renderStatistics() {
+    emptyStateEl.classList.remove('is-visible');
+    statsContentEl.classList.add('is-visible');
+
+    // Everything from here on computes stats and builds the charts —
+    // wrap it so one bad value can't take down the whole page.
+    try {
+      renderStatistics();
+    } catch (err) {
+      console.error('Gagal menghitung/menampilkan statistik:', err);
+    }
+
+    function renderStatistics() {
   var incomeTx = transactions.filter(function (t) { return t.type === 'income'; });
   var expenseTx = transactions.filter(function (t) { return t.type === 'expense'; });
 
@@ -358,6 +374,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   } // end renderStatistics
 
-}); // end DOMContentLoaded
+  }); // end api.getState().then
 
+}); // end DOMContentLoaded
 

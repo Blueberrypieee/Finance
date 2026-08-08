@@ -47,6 +47,49 @@ body {
   padding: 20px 16px 48px;
 }
 
+/* ---------- Skeleton loading ---------- */
+
+.is-hidden-init {
+  display: none;
+}
+
+.skeleton-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #E5E7EB 25%, #EDEFF2 37%, #E5E7EB 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+.skeleton-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.skeleton-summary-card {
+  height: 82px;
+}
+
+.skeleton-chart {
+  height: 220px;
+  border-radius: var(--radius-lg);
+}
+
 /* ---------- Top bar ---------- */
 
 .topbar {
@@ -645,5 +688,4 @@ body {
     height: 260px;
   }
 }
-
 
