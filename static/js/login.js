@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var passwordToggle = document.getElementById('passwordToggle');
   var eyeIcon        = document.getElementById('eyeIcon');
   var signInBtn      = document.getElementById('signInBtn');
+  var formErrorEl    = document.getElementById('formError');
 
   var EYE_OPEN =
     '<path d="M1 12C1 12 5 5 12 5C19 5 23 12 23 12C23 12 19 19 12 19C5 19 1 12 1 12Z" stroke="#6B7280" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // ----- Submit handling -----
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    formErrorEl.classList.remove('is-visible');
 
     var username = usernameInput.value.trim();
     var password = passwordInput.value;
@@ -58,19 +60,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!valid) return;
 
-    // Placeholder submit state — wire this up to the Flask
-    // authentication endpoint (e.g. POST /api/login) later.
     signInBtn.classList.add('is-loading');
     signInBtn.querySelector('.btn-primary__text').textContent = 'Signing in...';
 
-    setTimeout(function () {
-      signInBtn.classList.remove('is-loading');
-      signInBtn.querySelector('.btn-primary__text').textContent = 'Sign In';
-      console.log('TODO: connect to Flask backend', {
-        username: username,
-        remember: document.getElementById('rememberMe').checked
+    fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username, password: password })
+    })
+      .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+      .then(function (result) {
+        if (result.ok && result.data.success) {
+          window.location.href = result.data.redirect || '/menu';
+          return;
+        }
+        formErrorEl.textContent = result.data.error || 'Gagal masuk. Coba lagi.';
+        formErrorEl.classList.add('is-visible');
+      })
+      .catch(function () {
+        formErrorEl.textContent = 'Tidak bisa terhubung ke server. Coba lagi.';
+        formErrorEl.classList.add('is-visible');
+      })
+      .finally(function () {
+        signInBtn.classList.remove('is-loading');
+        signInBtn.querySelector('.btn-primary__text').textContent = 'Sign In';
       });
-    }, 900);
   });
 
 });

@@ -123,9 +123,15 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   confirmLogoutBtn.addEventListener('click', function () {
-    // No real session yet — this just sends the user back to the login page.
-    // Transaction data in localStorage is intentionally left untouched.
-    window.location.href = '/login';
+    fetch('/api/logout', { method: 'POST' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        window.location.href = data.redirect || '/login';
+      })
+      .catch(function () {
+        // Even if the request fails, still send the user back to login.
+        window.location.href = '/login';
+      });
   });
 
 });

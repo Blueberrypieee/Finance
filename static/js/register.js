@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var passwordToggle = document.getElementById('passwordToggle');
   var eyeIcon        = document.getElementById('eyeIcon');
   var registerBtn    = document.getElementById('registerBtn');
+  var formErrorEl    = document.getElementById('formError');
 
   var MAX_LEN = 6;
 
@@ -47,6 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // ----- Submit handling -----
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    formErrorEl.classList.remove('is-visible');
 
     var username = usernameInput.value.trim();
     var password = passwordInput.value;
@@ -64,16 +66,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!valid) return;
 
-    // Placeholder submit state — wire this up to the Flask
-    // registration endpoint (e.g. POST /api/register) later.
     registerBtn.classList.add('is-loading');
     registerBtn.querySelector('.btn-primary__text').textContent = 'Mendaftarkan...';
 
-    setTimeout(function () {
-      registerBtn.classList.remove('is-loading');
-      registerBtn.querySelector('.btn-primary__text').textContent = 'Daftar';
-      console.log('TODO: connect to Flask backend', { username: username });
-    }, 900);
+    fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username, password: password })
+    })
+      .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+      .then(function (result) {
+        if (result.ok && result.data.success) {
+          window.location.href = result.data.redirect || '/menu';
+          return;
+        }
+        formErrorEl.textContent = result.data.error || 'Gagal mendaftar. Coba lagi.';
+        formErrorEl.classList.add('is-visible');
+      })
+      .catch(function () {
+        formErrorEl.textContent = 'Tidak bisa terhubung ke server. Coba lagi.';
+        formErrorEl.classList.add('is-visible');
+      })
+      .finally(function () {
+        registerBtn.classList.remove('is-loading');
+        registerBtn.querySelector('.btn-primary__text').textContent = 'Daftar';
+      });
   });
 
 });

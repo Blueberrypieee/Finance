@@ -153,6 +153,21 @@ body {
   margin: 0 0 28px;
 }
 
+.form-error {
+  display: none;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: var(--error);
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin: -14px 0 20px;
+}
+
+.form-error.is-visible {
+  display: block;
+}
+
 /* ---------- Form ---------- */
 
 .login-form {
