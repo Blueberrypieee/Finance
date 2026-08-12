@@ -1,31 +1,14 @@
 document.addEventListener('DOMContentLoaded', function () {
 
   // ---------------------------------------------------------
-  // Data layer (same shape as menu.js — swap the inside for a real
-  // fetch() call once the Flask backend is ready; nothing that calls
-  // api.getState() below needs to change).
+  // Data layer (same shape as menu.js, read-only here)
   // ---------------------------------------------------------
-  var BALANCE_KEY = 'ft_balance';
-  var TRANSACTIONS_KEY = 'ft_transactions';
-
   var api = {
     getState: function () {
-      var rawBalance = localStorage.getItem(BALANCE_KEY);
-      var balanceValue = rawBalance !== null ? parseFloat(rawBalance) : 0;
-      if (isNaN(balanceValue)) balanceValue = 0;
-
-      var transactionsValue = [];
-      try {
-        var rawTx = localStorage.getItem(TRANSACTIONS_KEY);
-        var parsed = rawTx ? JSON.parse(rawTx) : [];
-        transactionsValue = Array.isArray(parsed) ? parsed : [];
-      } catch (e) {
-        transactionsValue = [];
-      }
-
-      // TODO(backend): replace the block above with:
-      //   return fetch('/api/state').then(function (res) { return res.json(); });
-      return Promise.resolve({ balance: balanceValue, transactions: transactionsValue });
+      return fetch('/api/state').then(function (res) {
+        if (!res.ok) throw new Error('Gagal memuat data (status ' + res.status + ')');
+        return res.json();
+      });
     }
   };
 
@@ -374,6 +357,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   } // end renderStatistics
 
+  }).catch(function (err) {
+    console.error(err);
+    document.getElementById('pageSkeleton').style.display = 'none';
+    document.getElementById('statisticsContent').classList.remove('is-hidden-init');
+    document.getElementById('emptyState').classList.add('is-visible');
+    document.getElementById('emptyState').querySelector('h2').textContent = 'Gagal memuat data';
+    document.getElementById('emptyState').querySelector('p').textContent = 'Coba refresh halaman ini.';
   }); // end api.getState().then
 
 }); // end DOMContentLoaded

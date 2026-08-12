@@ -1,11 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
 
   // ---------------------------------------------------------
-  // Storage keys & state
+  // State
   // ---------------------------------------------------------
-  var BALANCE_KEY = 'ft_balance';
-  var TRANSACTIONS_KEY = 'ft_transactions';
-
   var state = {
     balance: 0,
     transactions: []
@@ -50,6 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var transactionIdInput = document.getElementById('transactionId');
   var transactionTypeInput = document.getElementById('transactionType');
   var amountInput = document.getElementById('amount');
+  var amountErrorEl = document.getElementById('amountError');
   var categoryInput = document.getElementById('category');
   var notesInput = document.getElementById('notes');
   var dateInput = document.getElementById('date');
@@ -69,42 +67,28 @@ document.addEventListener('DOMContentLoaded', function () {
   // ---------------------------------------------------------
   // Data layer
   // ---------------------------------------------------------
-  // Every function here returns a Promise, even though it's backed by
-  // localStorage today. When the Flask backend is ready, only the INSIDE
-  // of these functions needs to change (e.g. swap for fetch() calls) —
-  // every place that calls api.getState()/api.saveState() below stays
-  // exactly the same.
+  // Talks to the Flask backend. saveState() always resolves with the
+  // FRESH state from the server (not just an ack) — the backend
+  // re-creates every transaction row on save, so ids can change. Every
+  // caller below must replace its local state with what this returns,
+  // never assume the old ids still apply.
   var api = {
     getState: function () {
-      var rawBalance = localStorage.getItem(BALANCE_KEY);
-      var balance = rawBalance !== null ? parseFloat(rawBalance) : 0;
-      if (isNaN(balance)) balance = 0;
-
-      var transactions = [];
-      try {
-        var rawTx = localStorage.getItem(TRANSACTIONS_KEY);
-        var parsed = rawTx ? JSON.parse(rawTx) : [];
-        transactions = Array.isArray(parsed) ? parsed : [];
-      } catch (e) {
-        transactions = [];
-      }
-
-      // TODO(backend): replace the block above with:
-      //   return fetch('/api/state').then(function (res) { return res.json(); });
-      return Promise.resolve({ balance: balance, transactions: transactions });
+      return fetch('/api/state').then(function (res) {
+        if (!res.ok) throw new Error('Gagal memuat data (status ' + res.status + ')');
+        return res.json();
+      });
     },
 
     saveState: function (balance, transactions) {
-      localStorage.setItem(BALANCE_KEY, String(balance));
-      localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
-
-      // TODO(backend): replace the two lines above with:
-      //   return fetch('/api/state', {
-      //     method: 'PUT',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({ balance: balance, transactions: transactions })
-      //   });
-      return Promise.resolve();
+      return fetch('/api/state', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ balance: balance, transactions: transactions })
+      }).then(function (res) {
+        if (!res.ok) throw new Error('Gagal menyimpan data (status ' + res.status + ')');
+        return res.json();
+      });
     }
   };
 
@@ -289,8 +273,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var valid = true;
     if (!amount || amount <= 0) {
+      amountErrorEl.textContent = 'Jumlah wajib diisi';
       setFieldError(amountInput, true);
       valid = false;
+    } else if (type === 'expense') {
+      // If editing an existing expense, its old amount is still counted
+      // in state.balance right now — add it back before checking, since
+      // that effect will be reversed anyway once we save.
+      var existingForCheck = id ? state.transactions.find(function (t) { return t.id === id; }) : null;
+      var availableBalance = state.balance + (existingForCheck && existingForCheck.type === 'expense' ? existingForCheck.amount : 0);
+
+      if (amount > availableBalance) {
+        amountErrorEl.textContent = 'Saldo tidak cukup (tersedia ' + formatRupiah(availableBalance) + ')';
+        setFieldError(amountInput, true);
+        valid = false;
+      }
     }
     if (!category) {
       setFieldError(categoryInput, true);
@@ -327,10 +324,17 @@ document.addEventListener('DOMContentLoaded', function () {
       state.balance += type === 'income' ? amount : -amount;
     }
 
-    api.saveState(state.balance, state.transactions).then(function () {
-      render();
-      closeTransactionModal();
-    });
+    api.saveState(state.balance, state.transactions)
+      .then(function (data) {
+        state.balance = data.balance;
+        state.transactions = data.transactions;
+        render();
+        closeTransactionModal();
+      })
+      .catch(function (err) {
+        console.error(err);
+        alert('Gagal menyimpan transaksi. Coba lagi.');
+      });
   });
 
   // ---------------------------------------------------------
@@ -363,10 +367,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     state.balance = value;
-    api.saveState(state.balance, state.transactions).then(function () {
-      render();
-      closeBalanceModal();
-    });
+    api.saveState(state.balance, state.transactions)
+      .then(function (data) {
+        state.balance = data.balance;
+        state.transactions = data.transactions;
+        render();
+        closeBalanceModal();
+      })
+      .catch(function (err) {
+        console.error(err);
+        alert('Gagal menyimpan saldo. Coba lagi.');
+      });
   });
 
   // ---------------------------------------------------------
@@ -395,7 +406,16 @@ document.addEventListener('DOMContentLoaded', function () {
       var tx = state.transactions[idx];
       state.balance += tx.type === 'income' ? -tx.amount : tx.amount;
       state.transactions.splice(idx, 1);
-      api.saveState(state.balance, state.transactions).then(render);
+      api.saveState(state.balance, state.transactions)
+        .then(function (data) {
+          state.balance = data.balance;
+          state.transactions = data.transactions;
+          render();
+        })
+        .catch(function (err) {
+          console.error(err);
+          alert('Gagal menghapus transaksi. Coba lagi.');
+        });
     }
     closeDeleteModal();
   });
@@ -476,6 +496,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     pageSkeletonEl.style.display = 'none';
     dashboardContentEl.classList.remove('is-hidden-init');
+  }).catch(function (err) {
+    console.error(err);
+    pageSkeletonEl.style.display = 'none';
+    dashboardContentEl.classList.remove('is-hidden-init');
+    alert('Gagal memuat data. Coba refresh halaman.');
   });
 
 });

@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
 
-  var TRANSACTIONS_KEY = 'ft_transactions';
-
   // ---------------------------------------------------------
   // Elements
   // ---------------------------------------------------------
@@ -31,26 +29,31 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // ---------------------------------------------------------
-  // Load transactions
+  // Load transactions from the backend
   // ---------------------------------------------------------
-  function loadTransactions() {
-    try {
-      var raw = localStorage.getItem(TRANSACTIONS_KEY);
-      var parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
-    }
-  }
+  var transactions = [];
 
-  var transactions = loadTransactions();
+  fetch('/api/state')
+    .then(function (res) {
+      if (!res.ok) throw new Error('Gagal memuat data (status ' + res.status + ')');
+      return res.json();
+    })
+    .then(function (data) {
+      transactions = data.transactions;
 
-  if (transactions.length === 0) {
-    csvEmptyNote.classList.add('is-visible');
-    exportCsvBtn.disabled = true;
-    exportCsvBtn.style.opacity = '0.5';
-    exportCsvBtn.style.cursor = 'not-allowed';
-  }
+      if (transactions.length === 0) {
+        csvEmptyNote.classList.add('is-visible');
+        exportCsvBtn.disabled = true;
+        exportCsvBtn.style.opacity = '0.5';
+        exportCsvBtn.style.cursor = 'not-allowed';
+      }
+    })
+    .catch(function (err) {
+      console.error(err);
+      exportCsvBtn.disabled = true;
+      exportCsvBtn.style.opacity = '0.5';
+      exportCsvBtn.style.cursor = 'not-allowed';
+    });
 
   // ---------------------------------------------------------
   // Export to CSV

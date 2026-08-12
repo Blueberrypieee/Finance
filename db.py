@@ -165,6 +165,15 @@ def delete_transaction(tx_id, user_id):
         conn.close()
 
 
+def delete_all_transactions(user_id):
+    conn = get_db()
+    try:
+        conn.execute("DELETE FROM transactions WHERE user_id = ?", (user_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def get_transaction_by_id(tx_id, user_id):
     conn = get_db()
     try:

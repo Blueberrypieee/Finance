@@ -109,6 +109,81 @@ def api_logout():
     return jsonify({"success": True, "redirect": url_for("login")})
 
 
+# ---------------------------------------------------------------
+# Transactions & balance API
+# ---------------------------------------------------------------
+
+def serialize_transaction(row):
+    """DB row -> JSON-friendly dict. id is kept as a string on purpose,
+    since the frontend was originally built around string ids
+    (e.g. 'tx_169...') — this way none of the existing JS comparisons
+    (dataset.id, input.value, etc.) need to change."""
+    return {
+        "id": str(row["id"]),
+        "type": row["type"],
+        "amount": row["amount"],
+        "category": row["category"],
+        "notes": row["notes"] or "",
+        "date": row["date"],
+        "createdAt": row["created_at"],
+    }
+
+
+@app.route("/api/state", methods=["GET"])
+@login_required
+def api_get_state():
+    user = db.get_user_by_id(session["user_id"])
+    transactions = db.get_transactions(session["user_id"])
+    return jsonify({
+        "balance": user["balance"],
+        "transactions": [serialize_transaction(t) for t in transactions]
+    })
+
+
+@app.route("/api/state", methods=["PUT"])
+@login_required
+def api_put_state():
+    data = request.get_json(silent=True) or {}
+    balance = data.get("balance")
+    transactions = data.get("transactions")
+
+    if not isinstance(balance, (int, float)):
+        return jsonify({"success": False, "error": "Saldo tidak valid."}), 400
+    if not isinstance(transactions, list):
+        return jsonify({"success": False, "error": "Data transaksi tidak valid."}), 400
+
+    user_id = session["user_id"]
+
+    # Full replace: simplest way to keep the frontend's existing
+    # "mutate local state, save the whole thing" pattern working.
+    db.delete_all_transactions(user_id)
+    for tx in transactions:
+        tx_type = tx.get("type")
+        amount = tx.get("amount")
+        category = (tx.get("category") or "").strip()
+        notes = tx.get("notes") or ""
+        date = tx.get("date")
+        created_at = tx.get("createdAt") or 0
+
+        if tx_type not in ("income", "expense"):
+            continue
+        if not isinstance(amount, (int, float)) or amount <= 0:
+            continue
+        if not category or not date:
+            continue
+
+        db.create_transaction(user_id, tx_type, amount, category, notes, date, created_at)
+
+    db.update_balance(user_id, balance)
+
+    user = db.get_user_by_id(user_id)
+    fresh_transactions = db.get_transactions(user_id)
+    return jsonify({
+        "balance": user["balance"],
+        "transactions": [serialize_transaction(t) for t in fresh_transactions]
+    })
+
+
 if __name__ == "__main__":
     # host 0.0.0.0 supaya bisa diakses dari browser HP yang sama di Termux
     app.run(host="0.0.0.0", port=5000, debug=True)
