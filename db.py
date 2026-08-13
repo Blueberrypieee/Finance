@@ -38,7 +38,9 @@ def init_db():
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 balance REAL NOT NULL DEFAULT 0,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                failed_attempts INTEGER NOT NULL DEFAULT 0,
+                locked_until TEXT
             );
 
             CREATE TABLE IF NOT EXISTS transactions (
@@ -55,6 +57,19 @@ def init_db():
             """
         )
         conn.commit()
+
+        # Lightweight migration for databases created before rate limiting
+        # was added — safe to run every startup, errors mean the column
+        # already exists.
+        for ddl in (
+            "ALTER TABLE users ADD COLUMN failed_attempts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN locked_until TEXT",
+        ):
+            try:
+                conn.execute(ddl)
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass  # column already exists
     finally:
         conn.close()
 
@@ -104,6 +119,44 @@ def update_balance(user_id, new_balance):
     try:
         conn.execute(
             "UPDATE users SET balance = ? WHERE id = ?", (new_balance, user_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def record_failed_login(username):
+    """Increments the failed-attempt counter for a username. No-op if the
+    username doesn't exist (we don't reveal that via error behavior)."""
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE users SET failed_attempts = failed_attempts + 1 WHERE username = ?",
+            (username,),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def set_lockout(username, locked_until_iso):
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE users SET locked_until = ? WHERE username = ?",
+            (locked_until_iso, username),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def reset_login_attempts(username):
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE username = ?",
+            (username,),
         )
         conn.commit()
     finally:

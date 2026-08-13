@@ -7,6 +7,17 @@ document.addEventListener('DOMContentLoaded', function () {
   var eyeIcon        = document.getElementById('eyeIcon');
   var signInBtn      = document.getElementById('signInBtn');
   var formErrorEl    = document.getElementById('formError');
+  var rememberMeCheckbox = document.getElementById('rememberMe');
+
+  var REMEMBERED_USERNAME_KEY = 'ft_remembered_username';
+
+  // ----- Pre-fill remembered username (pure UX convenience, not tied
+  // to the session/login state itself) -----
+  var rememberedUsername = localStorage.getItem(REMEMBERED_USERNAME_KEY);
+  if (rememberedUsername) {
+    usernameInput.value = rememberedUsername;
+    rememberMeCheckbox.checked = true;
+  }
 
   var EYE_OPEN =
     '<path d="M1 12C1 12 5 5 12 5C19 5 23 12 23 12C23 12 19 19 12 19C5 19 1 12 1 12Z" stroke="#6B7280" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
@@ -63,14 +74,25 @@ document.addEventListener('DOMContentLoaded', function () {
     signInBtn.classList.add('is-loading');
     signInBtn.querySelector('.btn-primary__text').textContent = 'Signing in...';
 
+    var remember = rememberMeCheckbox.checked;
+
     fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username, password: password })
+      body: JSON.stringify({
+        username: username,
+        password: password,
+        remember: remember
+      })
     })
       .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
       .then(function (result) {
         if (result.ok && result.data.success) {
+          if (remember) {
+            localStorage.setItem(REMEMBERED_USERNAME_KEY, username);
+          } else {
+            localStorage.removeItem(REMEMBERED_USERNAME_KEY);
+          }
           window.location.href = result.data.redirect || '/menu';
           return;
         }

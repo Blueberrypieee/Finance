@@ -72,6 +72,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // re-creates every transaction row on save, so ids can change. Every
   // caller below must replace its local state with what this returns,
   // never assume the old ids still apply.
+  var csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+  var csrfToken = csrfTokenMeta ? csrfTokenMeta.content : '';
+
   var api = {
     getState: function () {
       return fetch('/api/state').then(function (res) {
@@ -83,7 +86,10 @@ document.addEventListener('DOMContentLoaded', function () {
     saveState: function (balance, transactions) {
       return fetch('/api/state', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         body: JSON.stringify({ balance: balance, transactions: transactions })
       }).then(function (res) {
         if (!res.ok) throw new Error('Gagal menyimpan data (status ' + res.status + ')');
