@@ -3,10 +3,13 @@ import secrets
 from functools import wraps
 from datetime import timedelta, datetime
 
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import db
+
+load_dotenv()  # reads .env locally; no-op if the host sets env vars directly
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -294,6 +297,10 @@ def api_put_state():
 
 
 if __name__ == "__main__":
-    # host 0.0.0.0 supaya bisa diakses dari browser HP yang sama di Termux
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # PORT: most hosting platforms inject this automatically.
+    # FLASK_DEBUG: MUST be false/unset in production — debug mode exposes
+    # a live Python console via the browser on any unhandled error.
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug)
 
